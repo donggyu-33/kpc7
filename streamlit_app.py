@@ -254,19 +254,26 @@ st.markdown("""
         background-color: #252525 !important;
         border-color: #667eea !important;
     }
-    /* 열린 상태의 Expander 헤더: 흰 배경 대비 검은 텍스트 */
+    /* 열린 상태의 Expander 헤더: 검은 배경에 흰 텍스트 유지 */
     .streamlit-expanderHeader[aria-expanded="true"],
-    details[open] > summary.streamlit-expanderHeader {
-        background-color: #f5f5f5 !important;
-        color: #000000 !important;
-        border-color: #cccccc !important;
+    details[open] > summary.streamlit-expanderHeader,
+    details[open] summary,
+    summary[aria-expanded="true"] {
+        background-color: #1a1a1a !important;
+        color: #ffffff !important;
+        border-color: #667eea !important;
         opacity: 1 !important;
     }
-    .streamlit-expanderHeader[aria-expanded="true"] * ,
-    details[open] > summary.streamlit-expanderHeader * {
-        color: #000000 !important;
-        fill: #000000 !important;
-        stroke: #000000 !important;
+    .streamlit-expanderHeader[aria-expanded="true"] *,
+    details[open] > summary.streamlit-expanderHeader *,
+    details[open] summary *,
+    summary[aria-expanded="true"] *,
+    .streamlit-expanderHeader[aria-expanded="true"] p,
+    .streamlit-expanderHeader[aria-expanded="true"] span,
+    .streamlit-expanderHeader[aria-expanded="true"] div {
+        color: #ffffff !important;
+        fill: #ffffff !important;
+        stroke: #ffffff !important;
         opacity: 1 !important;
     }
 
@@ -506,6 +513,49 @@ st.markdown("""
         fill: #ffffff !important;
         stroke: #ffffff !important;
     }
+    
+    /* 강사 코멘트 저장 버튼 - 극단적 스타일 적용 */
+    button[key*="save_comment"],
+    button[data-testid="stButton"] button:last-of-type,
+    .stButton button {
+        background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%) !important;
+        color: #ffffff !important;
+        border: 2px solid #c0392b !important;
+        font-weight: 700 !important;
+        text-shadow: none !important;
+    }
+    
+    button[key*="save_comment"]::before,
+    button[key*="save_comment"]::after,
+    button[key*="save_comment"] * {
+        color: #ffffff !important;
+        fill: #ffffff !important;
+        stroke: #ffffff !important;
+    }
+    
+    button[key*="save_comment"]:hover,
+    button[key*="save_comment"]:focus,
+    button[key*="save_comment"]:active,
+    button[key*="save_comment"]:visited {
+        background: linear-gradient(135deg, #c0392b 0%, #a93226 100%) !important;
+        color: #ffffff !important;
+        border: 2px solid #a93226 !important;
+        box-shadow: 0 4px 8px rgba(231, 76, 60, 0.3) !important;
+    }
+    
+    /* Streamlit 기본 버튼 래퍼 오버라이드 */
+    div[data-testid="stButton"] button {
+        background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%) !important;
+        color: #ffffff !important;
+        border: none !important;
+    }
+    
+    div[data-testid="stButton"] button:hover {
+        background: linear-gradient(135deg, #c0392b 0%, #a93226 100%) !important;
+        color: #ffffff !important;
+    }
+
+
 </style>
 <script>
     function updateFileUploaderText() {
@@ -540,6 +590,37 @@ st.markdown("""
             if (text.includes('삭제')) {
                 if (!btn.classList.contains('delete-danger')) {
                     btn.classList.add('delete-danger');
+                    tagged = true;
+                }
+            }
+            // 코멘트 저장 버튼에 강력한 인라인 스타일 추가
+            if (text.includes('저장') && !text.includes('삭제')) {
+                // 부모 expander 확인
+                let parent = btn.closest('[data-testid="stExpander"]');
+                if (parent) {
+                    btn.style.cssText = `
+                        background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%) !important;
+                        color: #ffffff !important;
+                        border: none !important;
+                        font-weight: 700 !important;
+                        padding: 0.5rem 1rem !important;
+                        transition: all 0.3s ease !important;
+                    `;
+                    // 자식 요소들도 스타일 적용
+                    btn.querySelectorAll('*').forEach(child => {
+                        child.style.color = '#ffffff !important';
+                        child.style.fill = '#ffffff !important';
+                        child.style.stroke = '#ffffff !important';
+                    });
+                    // 마우스 이벤트
+                    btn.addEventListener('mouseenter', function() {
+                        this.style.background = 'linear-gradient(135deg, #c0392b 0%, #a93226 100%) !important';
+                        this.style.boxShadow = '0 4px 8px rgba(231, 76, 60, 0.3) !important';
+                    });
+                    btn.addEventListener('mouseleave', function() {
+                        this.style.background = 'linear-gradient(135deg, #e74c3c 0%, #c0392b 100%) !important';
+                        this.style.boxShadow = 'none';
+                    });
                     tagged = true;
                 }
             }
@@ -833,13 +914,20 @@ st.markdown("---")
 if not st.session_state.authenticated:
     st.info("🔑 좌측 탭에서 로그인 후 이용해주세요.")
 else:
-    st.success(f"👋 {st.session_state.user_name}님, {st.session_state.course_month} 수강생 로그인 상태입니다.")
+    if st.session_state.get("is_instructor", False):
+        st.success("👋 강사 로그인 상태입니다.")
+    else:
+        st.success(f"👋 {st.session_state.user_name}님, {st.session_state.course_month} 수강생 로그인 상태입니다.")
 
-# 탭 생성
-tab1, tab2 = st.tabs(["📝 분석하기", "📁 분석히스토리"])
+# 탭 생성 (강사는 분석히스토리만)
+if st.session_state.get("is_instructor", False) and st.session_state.authenticated:
+    tab1, tab2 = None, st.container()
+else:
+    tab1, tab2 = st.tabs(["📝 분석하기", "📁 분석히스토리"])
 
 # === 탭1: 분석하기 ===
-with tab1:
+if tab1 is not None:
+  with tab1:
     # 1. 음성 파일 업로드 섹션
     st.header("👨‍🏫 시연강의 업로드")
     # JS로 텍스트를 변경하므로, Python의 st.warning은 간결하게 유지
@@ -1171,13 +1259,99 @@ with tab1:
         # 분석 전 안내 메시지
         st.info("👆 먼저 강의 시연 음성 파일을 업로드하고 '분석하기' 버튼을 클릭해주세요.")
 
-# === 탭2: 분석히스토리 ===
 with tab2:
     if not st.session_state.authenticated:
         st.info("🔑 로그인 후 분석 히스토리를 확인할 수 있습니다.")
     elif not st.session_state.analysis_history:
         st.info("📭 아직 분석 기록이 없습니다. '분석하기' 탭에서 강의를 분석해보세요!")
+    elif st.session_state.get("is_instructor", False):
+        # 강사: 모든 기록을 월/이름별로 그룹화하여 표시
+        # 1. 월별 그룹화
+        from collections import defaultdict
+        month_dict = defaultdict(list)
+        for item in st.session_state.analysis_history:
+            month_dict[item.get("course_month", "")] .append(item)
+        for month in sorted(month_dict.keys()):
+            with st.expander(f"📅 {month}", expanded=False):
+                # 2. 이름별 그룹화
+                name_dict = defaultdict(list)
+                for item in month_dict[month]:
+                    name_dict[item.get("user_name", "")] .append(item)
+                for uname in sorted(name_dict.keys()):
+                    with st.expander(f"👤 {uname}", expanded=False):
+                        # 3. 해당 유저의 분석 기록 리스트
+                        records = name_dict[uname]
+                        for idx, rec in enumerate(records):
+                            label = f"{rec.get('file_name', '')} | {time.strftime('%Y-%m-%d %H:%M', time.localtime(rec.get('timestamp', time.time())))}"
+                            with st.expander(label, expanded=False):
+                                # 파일/점수/총평/자막 등 기존 정보 표시
+                                st.markdown(f"**파일**: {rec.get('file_name', 'N/A')} ({rec.get('file_size_mb', 0):.2f}MB)")
+                                # 오디오
+                                analysis_id = rec.get('analysis_id', '')
+                                if analysis_id and analysis_id in st.session_state.audio_file_data:
+                                    st.audio(st.session_state.audio_file_data[analysis_id], format='audio/mp3')
+                                # 정량 점수
+                                if rec.get("scores"):
+                                    st.markdown("**정량 점수**:")
+                                    scores_raw = rec.get("scores", {})
+                                    categories = list(scores_raw.keys())
+                                    values = []
+                                    for v in scores_raw.values():
+                                        try:
+                                            values.append(f"{float(v):.1f}")
+                                        except (ValueError, TypeError):
+                                            values.append(str(v))
+                                    header_cells = "".join(
+                                        f'<th style="padding:8px; text-align:center;">{c}</th>' for c in categories
+                                    )
+                                    value_cells = "".join(
+                                        f'<td style="padding:8px; text-align:center;">{val}</td>' for val in values
+                                    )
+                                    table_html = f"""
+                                    <div style='overflow-x:auto;'>
+                                        <table style='width:100%; border-collapse:collapse; text-align:center;'>
+                                            <thead><tr>{header_cells}</tr></thead>
+                                            <tbody><tr>{value_cells}</tr></tbody>
+                                        </table>
+                                    </div>
+                                    """
+                                    st.markdown(table_html, unsafe_allow_html=True)
+                                # 총평
+                                st.markdown("**정성 분석 총평**:")
+                                with st.spinner("총평 요약 중..."):
+                                    try:
+                                        summary_response = client.chat.completions.create(
+                                            model="gpt-4o-mini",
+                                            messages=[
+                                                {"role": "system", "content": "당신은 강의 피드백을 한 줄로 요약하는 전문가입니다. 핵심만 간결하게 요약하세요."},
+                                                {"role": "user", "content": f"다음 강의 피드백을 한 문장으로 요약해주세요:\n\n{rec.get('feedback', '')}"}
+                                            ],
+                                            temperature=0.5,
+                                            max_tokens=150
+                                        )
+                                        summary = summary_response.choices[0].message.content
+                                        st.info(summary)
+                                    except:
+                                        st.warning("총평 요약을 생성할 수 없습니다.")
+                                # 자막
+                                with st.expander("🔎 자막 원문 보기", expanded=False):
+                                    st.text_area("자막", value=rec.get("transcript", ""), height=200, disabled=True, key=f"transcript_{analysis_id}_{idx}")
+                                # 강사 코멘트 입력
+                                if "instructor_comments" not in st.session_state:
+                                    st.session_state.instructor_comments = {}
+                                comment_key = f"comment_{analysis_id}"
+                                comment_val = st.session_state.instructor_comments.get(comment_key, "")
+                                new_comment = st.text_area("강사 코멘트", value=comment_val, key=f"comment_input_{analysis_id}_{idx}")
+                                
+                                # 두 열 컬럼 생성: 저장 버튼과 숨겨진 영역
+                                col_btn, col_spacer = st.columns([1, 4])
+                                with col_btn:
+                                    if st.button("💾 저장", key=f"save_comment_{analysis_id}_{idx}", use_container_width=True):
+                                        st.session_state.instructor_comments[comment_key] = new_comment
+                                        st.success("코멘트가 저장되었습니다.")
+                                        st.rerun()
     else:
+        # 기존 수강생 UI + 강사 코멘트 표시
         history_options = [
             (
                 f"{idx + 1}. {item.get('course_month', '')} | {item.get('user_name', '')} | {item.get('file_name', '')} | {time.strftime('%Y-%m-%d %H:%M', time.localtime(item.get('timestamp', time.time())))}",
@@ -1208,47 +1382,36 @@ with tab2:
                         del st.session_state.audio_file_data[analysis_id]
                     st.success("✅ 분석 기록이 삭제되었습니다!")
                     st.rerun()
-            
             # 오디오 재생 기능
             analysis_id = selected_record.get('analysis_id', '')
             if analysis_id and analysis_id in st.session_state.audio_file_data:
                 st.audio(st.session_state.audio_file_data[analysis_id], format='audio/mp3')
-            
             # 정량 점수 표 형식
             if selected_record.get("scores"):
                 st.markdown("**정량 점수**:")
                 scores_raw = selected_record.get("scores", {})
-                if not scores_raw:
-                    st.info("점수 데이터가 없습니다.")
-                else:
+                categories = list(scores_raw.keys())
+                values = []
+                for v in scores_raw.values():
                     try:
-                        categories = list(scores_raw.keys())
-                        values = []
-                        for v in scores_raw.values():
-                            try:
-                                values.append(f"{float(v):.1f}")
-                            except (ValueError, TypeError):
-                                values.append(str(v))
-
-                        header_cells = "".join(
-                            f'<th style="padding:8px; text-align:center;">{c}</th>' for c in categories
-                        )
-                        value_cells = "".join(
-                            f'<td style="padding:8px; text-align:center;">{val}</td>' for val in values
-                        )
-
-                        table_html = f"""
-                        <div style='overflow-x:auto;'>
-                            <table style='width:100%; border-collapse:collapse; text-align:center;'>
-                                <thead><tr>{header_cells}</tr></thead>
-                                <tbody><tr>{value_cells}</tr></tbody>
-                            </table>
-                        </div>
-                        """
-                        st.markdown(table_html, unsafe_allow_html=True)
-                    except Exception:
-                        st.warning("점수 데이터를 표시할 수 없습니다.")
-            
+                        values.append(f"{float(v):.1f}")
+                    except (ValueError, TypeError):
+                        values.append(str(v))
+                header_cells = "".join(
+                    f'<th style="padding:8px; text-align:center;">{c}</th>' for c in categories
+                )
+                value_cells = "".join(
+                    f'<td style="padding:8px; text-align:center;">{val}</td>' for val in values
+                )
+                table_html = f"""
+                <div style='overflow-x:auto;'>
+                    <table style='width:100%; border-collapse:collapse; text-align:center;'>
+                        <thead><tr>{header_cells}</tr></thead>
+                        <tbody><tr>{value_cells}</tr></tbody>
+                    </table>
+                </div>
+                """
+                st.markdown(table_html, unsafe_allow_html=True)
             # 정성 피드백 총평 요약 (GPT 활용)
             st.markdown("**정성 분석 총평**:")
             with st.spinner("총평 요약 중..."):
@@ -1266,57 +1429,86 @@ with tab2:
                     st.info(summary)
                 except:
                     st.warning("총평 요약을 생성할 수 없습니다.")
-                
-                # 자막 원문
-                with st.expander("🔎 자막 원문 보기", expanded=False):
-                    st.text_area("자막", value=selected_record.get("transcript", ""), height=200, disabled=True, key=f"transcript_{analysis_id}")
+            # 자막 원문
+            with st.expander("🔎 자막 원문 보기", expanded=False):
+                st.text_area("자막", value=selected_record.get("transcript", ""), height=200, disabled=True, key=f"transcript_{analysis_id}")
+            # 강사 코멘트 표시
+            if "instructor_comments" in st.session_state:
+                comment_key = f"comment_{analysis_id}"
+                comment_val = st.session_state.instructor_comments.get(comment_key, "")
+                if comment_val:
+                    st.markdown(f"**강사 코멘트:**\n> {comment_val}")
 
 
 # 사이드바: 로그인 및 추가 옵션
 with st.sidebar:
     st.header("🔑 로그인")
-    
+    # 1. 구분 선택 (로그인 전에만 표시)
+    if "login_role" not in st.session_state:
+        st.session_state.login_role = "수강생"
     if not st.session_state.authenticated:
-        login_type = st.radio("로그인 유형", ["신규 가입", "기존 로그인"], horizontal=True)
-        
-        with st.form("login_form"):
-            name_input = st.text_input("성명")
-            month_input = st.selectbox("수강월", MONTH_OPTIONS)
-            login_submit = st.form_submit_button("로그인" if login_type == "기존 로그인" else "가입", use_container_width=True)
-        
-        if login_submit:
-            if name_input.strip() == "":
-                st.error("성명을 입력해주세요.")
-            else:
-                user_key = f"{name_input.strip()}_{month_input}"
-                
-                if login_type == "신규 가입":
-                    if user_key in st.session_state.user_database:
-                        st.error("이미 존재하는 사용자입니다. '기존 로그인'을 선택해주세요.")
-                    else:
-                        st.session_state.user_database[user_key] = {
-                            "name": name_input.strip(),
-                            "month": month_input,
-                            "created_at": time.time()
-                        }
-                        st.session_state.user_name = name_input.strip()
-                        st.session_state.course_month = month_input
-                        st.session_state.authenticated = True
-                        st.success(f"{name_input.strip()}님, 신규 가입 완료!")
-                        st.rerun()
-                else:  # 기존 로그인
-                    if user_key in st.session_state.user_database:
-                        st.session_state.user_name = name_input.strip()
-                        st.session_state.course_month = month_input
-                        st.session_state.authenticated = True
-                        st.success(f"{name_input.strip()}님, 로그인 완료!")
-                        st.rerun()
-                    else:
-                        st.error("존재하지 않는 사용자입니다. '신규 가입'을 선택해주세요.")
+        login_role = st.radio("구분", ["수강생", "강사"], horizontal=True, key="login_role_radio")
+        st.session_state.login_role = login_role
     else:
-        st.success(f"👤 {st.session_state.user_name}\n📅 {st.session_state.course_month}")
+        login_role = st.session_state.login_role
+
+    if not st.session_state.authenticated:
+        if login_role == "수강생":
+            login_type = st.radio("로그인 유형", ["신규 가입", "기존 로그인"], horizontal=True)
+            with st.form("login_form"):
+                name_input = st.text_input("성명")
+                month_input = st.selectbox("수강월", MONTH_OPTIONS)
+                login_submit = st.form_submit_button("로그인" if login_type == "기존 로그인" else "가입", use_container_width=True)
+            if login_submit:
+                if name_input.strip() == "":
+                    st.error("성명을 입력해주세요.")
+                else:
+                    user_key = f"{name_input.strip()}_{month_input}"
+                    if login_type == "신규 가입":
+                        if user_key in st.session_state.user_database:
+                            st.error("이미 존재하는 사용자입니다. '기존 로그인'을 선택해주세요.")
+                        else:
+                            st.session_state.user_database[user_key] = {
+                                "name": name_input.strip(),
+                                "month": month_input,
+                                "created_at": time.time()
+                            }
+                            st.session_state.user_name = name_input.strip()
+                            st.session_state.course_month = month_input
+                            st.session_state.authenticated = True
+                            st.session_state.is_instructor = False
+                            st.success(f"{name_input.strip()}님, 신규 가입 완료!")
+                            st.rerun()
+                    else:  # 기존 로그인
+                        if user_key in st.session_state.user_database:
+                            st.session_state.user_name = name_input.strip()
+                            st.session_state.course_month = month_input
+                            st.session_state.authenticated = True
+                            st.session_state.is_instructor = False
+                            st.success(f"{name_input.strip()}님, 로그인 완료!")
+                            st.rerun()
+                        else:
+                            st.error("존재하지 않는 사용자입니다. '신규 가입'을 선택해주세요.")
+        else:  # 강사
+            with st.form("instructor_login_form"):
+                pw_input = st.text_input("패스워드", type="password")
+                login_submit = st.form_submit_button("강사 로그인", use_container_width=True)
+            if login_submit:
+                if pw_input == "1111":
+                    st.session_state.authenticated = True
+                    st.session_state.is_instructor = True
+                    st.success("강사님, 로그인 완료!")
+                    st.rerun()
+                else:
+                    st.error("패스워드가 올바르지 않습니다.")
+    else:
+        if st.session_state.is_instructor:
+            st.success("👤 강사님 로그인 상태입니다.")
+        else:
+            st.success(f"👤 {st.session_state.user_name}\n📅 {st.session_state.course_month}")
         if st.button("로그아웃", use_container_width=True):
             st.session_state.authenticated = False
+            st.session_state.is_instructor = False
             st.session_state.user_name = ""
             st.session_state.course_month = ""
             st.session_state.messages = []
@@ -1331,8 +1523,7 @@ with st.sidebar:
             st.session_state.uploaded_file_size = None
             st.rerun()
         st.markdown("---")
-    
-    if st.session_state.video_analyzed:
+    if st.session_state.video_analyzed and not st.session_state.is_instructor:
         st.success("✅ 분석 완료")
         if st.button("새로운 분석 시작하기"):
             st.session_state.messages = []
@@ -1343,5 +1534,4 @@ with st.sidebar:
             st.session_state.scores = {}
             st.rerun()
         st.markdown("---")
-    
     st.caption("Powered by OpenAI GPT-4o-mini & Whisper-1")
