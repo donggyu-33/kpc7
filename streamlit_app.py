@@ -1434,7 +1434,7 @@ with tab2:
                 except:
                     st.warning("총평 요약을 생성할 수 없습니다.")
             # 자막 원문
-            with st.expander("🔎 자막 원문 보기", expanded=False):
+            with st.expander("🔎 스크립트 보기", expanded=False):
                 st.text_area("자막", value=selected_record.get("transcript", ""), height=200, disabled=True, key=f"transcript_{analysis_id}")
             # 강사 코멘트 표시
             if "instructor_comments" in st.session_state:
