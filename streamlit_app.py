@@ -1351,13 +1351,17 @@ with tab2:
                                         st.success("코멘트가 저장되었습니다.")
                                         st.rerun()
     else:
-        # 기존 수강생 UI + 강사 코멘트 표시
+        # 기존 수강생 UI + 강사 코멘트 표시 (본인 기록만 필터링)
+        my_history = [
+            item for item in st.session_state.analysis_history
+            if item.get("user_name", "") == st.session_state.user_name and item.get("course_month", "") == st.session_state.course_month
+        ]
         history_options = [
             (
                 f"{idx + 1}. {item.get('course_month', '')} | {item.get('user_name', '')} | {item.get('file_name', '')} | {time.strftime('%Y-%m-%d %H:%M', time.localtime(item.get('timestamp', time.time())))}",
                 item
             )
-            for idx, item in enumerate(st.session_state.analysis_history)
+            for idx, item in enumerate(my_history)
         ]
         labels = [opt[0] for opt in history_options]
         default_idx = len(labels) - 1 if labels else 0
